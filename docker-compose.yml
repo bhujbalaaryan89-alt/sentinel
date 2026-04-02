@@ -1,0 +1,12 @@
+services:
+  sentinel-bot:
+    build: .
+    container_name: sentinel-bot
+    env_file:
+      - .env
+    environment:
+      - WORKSPACE_DIR=/app/workspace
+    volumes:
+      # Mount the host project directory into the container as the workspace
+      - Z:\dbotk:/app/workspace
+    restart: unless-stopped
