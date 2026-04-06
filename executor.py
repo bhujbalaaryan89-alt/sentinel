@@ -17,9 +17,10 @@ from skills.research_ops import (
 from summarizer import (
     summarize_text, summarize_url, summarize_file, summarize_bullet_points, summarize_email
 )
+from skills.linkedin_ops import post_to_linkedin
 
 # Tools that require explicit user approval before execution
-DANGEROUS_TOOLS = ['write_local_file', 'send_email', 'delete_email', 'delete_calendar_event']
+DANGEROUS_TOOLS = ['write_local_file', 'send_email', 'delete_email', 'delete_calendar_event', 'post_to_linkedin']
 
 async def execute_tool(tool_name: str, arguments: dict) -> str:
     """Routes the tool name to the appropriate function and executes it."""
@@ -110,6 +111,16 @@ async def execute_tool(tool_name: str, arguments: dict) -> str:
             return draft_email(to_email, subject, body)
         except Exception as e:
             return f"Error drafting email: {str(e)}"
+
+    # ─── LinkedIn Tools ───
+    elif tool_name == "post_to_linkedin":
+        text = arguments.get("text")
+        if not text:
+            return "ERROR: 'text' argument is required for post_to_linkedin."
+        try:
+            return post_to_linkedin(text)
+        except Exception as e:
+            return f"Error posting to LinkedIn: {str(e)}"
 
     # ─── Inbox Engine Tools ───
     elif tool_name == "triage_inbox":

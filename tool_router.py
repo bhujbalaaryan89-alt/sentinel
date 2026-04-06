@@ -39,6 +39,9 @@ TOOL_GROUPS = {
         "summarize_text", "summarize_url_content",
         "summarize_local_file", "summarize_bullet_points", "summarize_email"
     ],
+    "linkedin": [
+        "post_to_linkedin"
+    ],
 }
 
 # Build a reverse lookup: tool_name → schema
@@ -76,6 +79,9 @@ INTENT_KEYWORDS = {
     "browser": [
         "browse", "website", "navigate", "click", "page", "url",
         "open site", "go to",
+    ],
+    "linkedin": [
+        "linkedin", "post on linkedin", "publish", "linkedinpost", "share on linkedin"
     ],
 }
 

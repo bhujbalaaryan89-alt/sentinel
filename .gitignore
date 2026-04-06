@@ -2,6 +2,7 @@
 .env
 credentials.json
 token.json
+linkedin_token.json
 secret.txt
 processed_emails.json
 

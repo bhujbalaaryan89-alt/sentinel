@@ -164,7 +164,15 @@ async def auto_email_summarizer_routine(context: ContextTypes.DEFAULT_TYPE):
         
         if "ERROR:" not in summary_text and summary_text:
             header = "📩 **New Email Alert!**\n\n"
-            alert_text = str(header) + str(summary_text)  # type: ignore
+            
+            # Anti-spam measure: Strip out actual http/https links from automated summaries
+            import re
+            safe_summary = re.sub(r'http[s]?://\S+', '[LINK REMOVED FOR ANTI-SPAM]', str(summary_text))
+            
+            alert_text = str(header) + safe_summary
+            
+            # Add artificial delay to avoid Telegram ping limit
+            await asyncio.sleep(3.0)
             await context.bot.send_message(chat_id=telegram_user_id, text=alert_text, parse_mode="Markdown")
             db.save_message(telegram_user_id, "assistant", alert_text)
             
@@ -298,6 +306,32 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Error handling document: {e}")
         await update.message.reply_text(f"❌ Error downloading file: {str(e)}")
+
+
+async def handle_linkedinpost(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Explicitly handles the /linkedinpost command."""
+    user_id = str(update.message.from_user.id)
+    text = update.message.text
+    
+    # Extract the post content
+    parts = text.split(maxsplit=1)
+    if len(parts) < 2:
+        await update.message.reply_text("Usage: `/linkedinpost [your text here]`", parse_mode="Markdown")
+        return
+        
+    post_content = parts[1]
+    logger.info(f"Received explicit /linkedinpost command from {user_id}")
+    
+    # We map this directly into the LLM flow by prompting it to use the tool
+    prompt = (
+        f"The user has explicitly asked to post the following text to LinkedIn:\n\n"
+        f'"{post_content}"\n\n'
+        f"CRITICAL SYSTEM INSTRUCTION: You MUST invoke the `post_to_linkedin` tool to process this.\n"
+        f"You MUST include the JSON argument `\"text\": \"{post_content}\"` precisely."
+    )
+    
+    # Pass the constructed prompt to the main handle logic without mutating the readonly update object
+    await handle_message(update, context, custom_text=prompt)
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE, custom_text: Optional[str] = None):
@@ -587,6 +621,7 @@ def main():
     )
     
     # Add message handlers
+    application.add_handler(CommandHandler("linkedinpost", handle_linkedinpost))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     application.add_handler(MessageHandler(filters.Document.ALL, handle_document))
     
@@ -613,8 +648,8 @@ def main():
         # Follow-up check every 6 hours
         application.job_queue.run_repeating(followup_check_routine, interval=21600, first=300)
         
-        # Continuously monitor unread inbox every 5 seconds for instant push alerts
-        application.job_queue.run_repeating(auto_email_summarizer_routine, interval=5, first=5)
+        # Continuously monitor unread inbox every 60 seconds (Anti-spam rate limit)
+        application.job_queue.run_repeating(auto_email_summarizer_routine, interval=60, first=30)
     else:
         logger.warning("Job queue is not initialized. Proactive routines will not run.")
 
